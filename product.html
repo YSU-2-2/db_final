@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>상품 상세</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .product-info { display: flex; gap: 30px; margin-bottom: 40px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
+        .product-info img { width: 300px; height: 300px; object-fit: cover; }
+        .review-item { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+        .star { color: gold; }
+        .btn-cart { padding: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <a href="index.html">← 목록으로</a>
+    <div id="product-detail">로딩중...</div>
+
+    <h3>📝 상품 리뷰</h3>
+    <div id="review-form" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd;">
+        <h4>리뷰 작성</h4>
+        <select id="rating">
+            <option value="5">⭐⭐⭐⭐⭐ (5점)</option>
+            <option value="4">⭐⭐⭐⭐ (4점)</option>
+            <option value="3">⭐⭐⭐ (3점)</option>
+            <option value="2">⭐⭐ (2점)</option>
+            <option value="1">⭐ (1점)</option>
+        </select>
+        <input type="text" id="comment" placeholder="리뷰 내용을 입력하세요" style="width: 60%;">
+        <button onclick="writeReview()">등록</button>
+    </div>
+    <div id="review-list"></div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = urlParams.get('id');
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        async function loadProduct() {
+            const res = await fetch('/api/products');
+            const products = await res.json();
+            const product = products.find(p => p.product_id == productId);
+
+            document.getElementById('product-detail').innerHTML = `
+                <div class="product-info">
+                    <img src="${product.image_url}" onerror="this.src='https://placehold.co/300'">
+                    <div>
+                        <h1>${product.name}</h1>
+                        <p>${product.category_name}</p>
+                        <h2>${product.price.toLocaleString()}원</h2>
+                        <input type="number" id="qty" value="1" min="1" style="width: 50px; padding: 5px;">
+                        <button class="btn-cart" onclick="addToCart(${product.product_id})">장바구니 담기</button>
+                    </div>
+                </div>
+            `;
+            loadReviews();
+        }
+
+        // ✅ 수정된 장바구니 담기 함수
+        async function addToCart(id) {
+            if (!user) return alert("로그인이 필요합니다.");
+            const qty = document.getElementById('qty').value;
+            
+            try {
+                const response = await fetch('/api/cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        member_id: user.member_id, 
+                        product_id: id, 
+                        quantity: qty 
+                    })
+                });
+
+                if(response.ok) {
+                    // ✅ 이동 질문 없이 성공 메시지만 표시하고 끝!
+                    alert("장바구니에 담겼습니다.");
+                } else {
+                    alert("담기 실패");
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function loadReviews() {
+            const res = await fetch(`/api/products/${productId}/reviews`);
+            const reviews = await res.json();
+            
+            document.getElementById('review-list').innerHTML = reviews.map(r => `
+                <div class="review-item">
+                    <strong>${r.reviewer_name}</strong> 
+                    <span class="star">${'★'.repeat(r.rating)}</span>
+                    <p>${r.comment}</p>
+                    <small>${new Date(r.created_at).toLocaleDateString()}</small>
+                </div>
+            `).join('') || '<p>작성된 리뷰가 없습니다.</p>';
+        }
+
+        async function writeReview() {
+            if (!user) return alert("로그인이 필요합니다.");
+            const rating = document.getElementById('rating').value;
+            const comment = document.getElementById('comment').value;
+
+            const res = await fetch('/api/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    member_id: user.member_id,
+                    product_id: productId,
+                    rating,
+                    comment
+                })
+            });
+
+            const result = await res.json();
+            alert(result.message);
+            if (res.ok) loadReviews();
+        }
+
+        loadProduct();
+    </script>
+</body>
+</html>

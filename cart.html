@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>장바구니</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        
+        /* 홈 버튼 스타일 */
+        .btn-home { 
+            display: inline-block; 
+            text-decoration: none; 
+            color: #555; 
+            font-weight: bold; 
+            margin-bottom: 20px; 
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .btn-home:hover { background-color: #e2e6ea; }
+
+        .cart-item { display: flex; border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; align-items: center; border-radius: 8px; }
+        .cart-item img { width: 80px; height: 80px; object-fit: cover; margin-right: 20px; border-radius: 5px; }
+        .info { flex-grow: 1; }
+        .actions { text-align: right; }
+        
+        button { padding: 5px 10px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background-color: white; }
+        button:hover { background-color: #f0f0f0; }
+        
+        /* 삭제 버튼은 빨간색으로 */
+        .btn-delete { color: #dc3545; border-color: #dc3545; }
+        .btn-delete:hover { background-color: #dc3545; color: white; }
+
+        .btn-order { background: #28a745; color: white; padding: 15px; width: 100%; border: none; font-size: 18px; margin-top: 20px; border-radius: 5px; }
+        .btn-order:hover { background-color: #218838; }
+        
+        input[type="number"] { width: 50px; padding: 5px; text-align: center; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="btn-home">← 쇼핑 계속하기 (홈으로)</a>
+
+    <h1>🛒 장바구니</h1>
+    <div id="cart-list">불러오는 중...</div>
+    
+    <div style="text-align: right; margin-top: 20px; padding-top: 20px; border-top: 2px solid #eee;">
+        <h3>총 결제금액: <span id="total-price">0</span>원</h3>
+    </div>
+    
+    <button class="btn-order" onclick="orderAll()">전체 주문하기</button>
+
+    <script>
+        let cartData = [];
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        async function loadCart() {
+            if (!user) { alert("로그인이 필요합니다."); location.href='login.html'; return; }
+
+            const res = await fetch(`/api/cart?member_id=${user.member_id}`);
+            cartData = await res.json();
+            
+            const list = document.getElementById('cart-list');
+            let total = 0;
+            
+            // 1. 장바구니가 비었을 때
+            if(cartData.length === 0) {
+                list.innerHTML = "<div style='text-align:center; padding: 50px; color: #888;'>장바구니가 비어있습니다.</div>";
+                document.getElementById('total-price').innerText = "0";
+                return;
+            }
+
+            // 2. 상품 목록 표시
+            list.innerHTML = cartData.map(item => {
+                total += item.price * item.quantity;
+                return `
+                <div class="cart-item">
+                    <img src="${item.image_url}" onerror="this.src='https://placehold.co/100'">
+                    <div class="info">
+                        <h3>${item.name}</h3>
+                        <p>${item.price.toLocaleString()}원</p>
+                    </div>
+                    <div class="actions">
+                        수량: <input type="number" value="${item.quantity}" min="1" onchange="updateQty(${item.cart_id}, this.value)">
+                        <button class="btn-delete" onclick="deleteItem(${item.cart_id})">삭제</button>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('total-price').innerText = total.toLocaleString();
+        }
+
+        async function updateQty(cartId, qty) {
+            if(qty < 1) return alert("수량은 1개 이상이어야 합니다.");
+            await fetch(`/api/cart/${cartId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity: qty })
+            });
+            loadCart();
+        }
+
+        async function deleteItem(cartId) {
+            if(!confirm('장바구니에서 삭제하시겠습니까?')) return;
+            await fetch(`/api/cart/${cartId}`, { method: 'DELETE' });
+            loadCart();
+        }
+
+        async function orderAll() {
+            if(cartData.length === 0) return alert("주문할 상품이 없습니다.");
+            if(!confirm("장바구니의 모든 상품을 주문하시겠습니까?")) return;
+
+            const orderData = {
+                member_id: user.member_id,
+                recipient_name: user.name,
+                recipient_phone: "010-0000-0000",
+                shipping_address: "기본 배송지",
+                payment_method: "CARD",
+                items: cartData.map(item => ({ 
+                    product_id: item.product_id, 
+                    quantity: item.quantity 
+                }))
+            };
+
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                const result = await res.json();
+
+                if(res.ok) {
+                    alert("주문이 완료되었습니다!");
+                    loadCart(); // 장바구니 비우기 확인
+                } else {
+                    alert("주문 실패: " + result.message);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("서버 통신 오류");
+            }
+        }
+
+        loadCart();
+    </script>
+</body>
+</html>

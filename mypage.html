@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>마이페이지 - 주문 내역</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background-color: #f9f9f9; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-home { text-decoration: none; color: #333; font-weight: bold; padding: 10px; border: 1px solid #ccc; background: white; border-radius: 5px; }
+        
+        /* 주문 카드 스타일 */
+        .order-card { background: white; border: 1px solid #ddd; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .order-header { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; color: #666; font-size: 0.9em; display: flex; justify-content: space-between; }
+        .order-item { display: flex; align-items: center; margin-top: 15px; }
+        .order-item img { width: 80px; height: 80px; object-fit: cover; border-radius: 5px; margin-right: 20px; border: 1px solid #eee; }
+        .item-info { flex-grow: 1; }
+        .item-info h3 { margin: 0 0 5px 0; font-size: 1.1em; color: #333; }
+        .item-info p { margin: 0; color: #888; }
+        
+        /* 리뷰 버튼 스타일 */
+        .btn-review { background-color: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: background 0.2s; }
+        .btn-review:hover { background-color: #0056b3; }
+        .review-done { background-color: #eee; color: #888; cursor: default; }
+
+        /* 리뷰 작성 모달(팝업) */
+        #review-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; width: 400px; text-align: center; }
+        .modal-content select, .modal-content textarea { width: 100%; margin: 10px 0; padding: 10px; box-sizing: border-box; }
+        .modal-btns { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="btn-home">← 홈으로</a>
+        <h1>📦 주문 내역 & 리뷰</h1>
+    </div>
+
+    <div id="order-list">불러오는 중...</div>
+
+    <div id="review-modal">
+        <div class="modal-content">
+            <h3>📝 리뷰 작성</h3>
+            <p id="modal-product-name" style="color:#666;"></p>
+            <select id="modal-rating">
+                <option value="5">⭐⭐⭐⭐⭐ (5점)</option>
+                <option value="4">⭐⭐⭐⭐ (4점)</option>
+                <option value="3">⭐⭐⭐ (3점)</option>
+                <option value="2">⭐⭐ (2점)</option>
+                <option value="1">⭐ (1점)</option>
+            </select>
+            <textarea id="modal-comment" rows="4" placeholder="상품은 어떠셨나요? 솔직한 후기를 남겨주세요."></textarea>
+            <div class="modal-btns">
+                <button onclick="submitReview()" class="btn-review">등록</button>
+                <button onclick="closeModal()" class="btn-home">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem('user'));
+        // 리뷰 작성을 위해 선택된 상품 정보를 임시 저장할 변수
+        let selectedProduct = null;
+
+        // 1. 주문 내역 불러오기
+        async function loadOrders() {
+            if (!user) {
+                alert("로그인이 필요합니다.");
+                location.href = 'login.html';
+                return;
+            }
+
+            const res = await fetch(`/api/mypage/orders?member_id=${user.member_id}`);
+            const orders = await res.json();
+            
+            const list = document.getElementById('order-list');
+            if(orders.length === 0) {
+                list.innerHTML = "<div style='text-align:center; padding: 50px;'>아직 주문한 내역이 없습니다.</div>";
+                return;
+            }
+
+            // 주문 목록 그리기
+            list.innerHTML = orders.map(item => `
+                <div class="order-card">
+                    <div class="order-header">
+                        <span>주문일: ${item.order_date}</span>
+                        <span>주문번호: ${item.order_id}</span>
+                    </div>
+                    <div class="order-item">
+                        <img src="${item.image_url}" onerror="this.src='https://placehold.co/100'">
+                        <div class="item-info">
+                            <h3>${item.product_name}</h3>
+                            <p>${item.price_at_purchase.toLocaleString()}원 / ${item.quantity}개</p>
+                        </div>
+                        <div>
+                            ${item.review_id 
+                                ? `<button class="btn-review review-done" disabled>✅ 작성 완료 (${item.rating}점)</button>` 
+                                : `<button class="btn-review" onclick="openModal(${item.product_id}, '${item.product_name}')">✍ 리뷰 쓰기</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 2. 리뷰 작성창 열기
+        function openModal(productId, productName) {
+            selectedProduct = productId;
+            document.getElementById('modal-product-name').innerText = productName;
+            document.getElementById('modal-comment').value = '';
+            document.getElementById('review-modal').style.display = 'flex';
+        }
+
+        // 3. 리뷰 작성창 닫기
+        function closeModal() {
+            document.getElementById('review-modal').style.display = 'none';
+            selectedProduct = null;
+        }
+
+        // 4. 리뷰 서버로 전송
+        async function submitReview() {
+            const rating = document.getElementById('modal-rating').value;
+            const comment = document.getElementById('modal-comment').value;
+
+            if(!comment) return alert("내용을 입력해주세요.");
+
+            try {
+                const res = await fetch('/api/reviews', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        member_id: user.member_id,
+                        product_id: selectedProduct,
+                        rating: rating,
+                        comment: comment
+                    })
+                });
+
+                const result = await res.json();
+                
+                if (res.ok) {
+                    alert("리뷰가 등록되었습니다!");
+                    closeModal();
+                    loadOrders(); // 목록 새로고침 (작성 완료로 바뀌는지 확인)
+                } else {
+                    alert("등록 실패: " + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("오류 발생");
+            }
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>

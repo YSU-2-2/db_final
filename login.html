@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>로그인</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; }
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 300px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        h2 { text-align: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>로그인</h2>
+        <input type="email" id="email" placeholder="이메일">
+        <input type="password" id="password" placeholder="비밀번호">
+        <button onclick="login()">로그인</button>
+        <p style="text-align: center; margin-top: 15px;">
+            계정이 없으신가요? <a href="register.html">회원가입</a>
+        </p>
+    </div>
+
+    <script>
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // 로그인 성공 시 브라우저에 회원 정보 저장 (세션 대신 localStorage 사용)
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    alert("환영합니다 " + result.user.name + "님!");
+                    window.location.href = 'index.html'; // 메인 화면으로 이동
+                } else {
+                    alert("로그인 실패: " + result.message);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("서버 통신 오류");
+            }
+        }
+    </script>
+</body>
+</html>

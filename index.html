@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>연성FM</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .product-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; text-align: center; }
+        .product-card img { width: 100%; height: 150px; object-fit: cover; margin-bottom: 10px; cursor: pointer; }
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; margin: 2px; }
+        .btn-primary { background-color: #0056b3; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; } /* 장바구니 버튼 색상 */
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-cart { background-color: #28a745; color: white; } /* 상단 장바구니 버튼 */
+        /* 카테고리 바 스타일 */
+        .category-bar { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            padding: 10px 0; 
+            overflow-x: auto; /* 모바일에서 가로 스크롤 가능 */
+            white-space: nowrap;
+            border-bottom: 1px solid #eee;
+        }
+        .cat-btn { 
+            padding: 10px 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 20px; 
+            background: white; 
+            cursor: pointer; 
+            font-size: 14px;
+            color: #555;
+            transition: 0.3s;
+        }
+        .cat-btn:hover { background: #f0f0f0; }
+        .cat-btn.active { 
+            background: #333; 
+            color: white; 
+            border-color: #333; 
+            font-weight: bold;
+        }
+        /* 리뷰 평점 스타일 */
+        .product-rating {
+            margin: 10px 0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        .star-icon { color: #333; font-size: 14px; } /* 별 색상 */
+        .rating-score { font-weight: bold; color: #333; } /* 점수 (5.0) */
+        .review-count { 
+            color: #e74c3c; /* 리뷰 개수는 빨간색 */
+            font-weight: bold; 
+            font-size: 13px;
+        }
+        .review-text { color: #e74c3c; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🛋️ 연성FM </h1>
+        <div id="auth-section">
+            <button class="btn btn-primary" onclick="location.href='login.html'">로그인</button>
+            <button class="btn" onclick="location.href='register.html'">회원가입</button>
+        </div>
+    </header> 
+
+    <div id="category-container" class="category-bar">
+        </div>
+        
+    <h2>상품 목록</h2>
+    <div id="product-list" class="product-grid">
+        <p>상품을 불러오는 중...</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginStatus();
+            loadCategories();
+            loadProducts('all');
+        });
+
+        function checkLoginStatus() {
+            const userStr = localStorage.getItem('user');
+            const authSection = document.getElementById('auth-section');
+
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                authSection.innerHTML = `
+                    <span><b>${user.name}</b>님</span>
+                    <button class="btn" style="background:#6c757d; color:white;" onclick="location.href='mypage.html'">📦 주문내역</button>
+                    <button class="btn btn-cart" onclick="location.href='cart.html'">🛒 장바구니</button>
+                    <button class="btn btn-danger" onclick="logout()">로그아웃</button>
+                `;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+            alert("로그아웃 되었습니다.");
+            window.location.reload();
+        }
+
+        async function loadCategories() {
+            try {
+                const res = await fetch('/api/categories');
+                const categories = await res.json();
+
+                const container = document.getElementById('category-container');
+                
+                // '전체' 버튼 먼저 추가
+                let html = `<button class="cat-btn active" onclick="filterCategory('all', this)">전체보기</button>`;
+                
+                // DB에 있는 카테고리들 버튼 추가
+                html += categories.map(c => 
+                    `<button class="cat-btn" onclick="filterCategory(${c.category_id}, this)">${c.name}</button>`
+                ).join('');
+
+                container.innerHTML = html;
+            } catch (error) {
+                console.error("카테고리 로드 실패", error);
+            }
+        }
+        function filterCategory(id, btnElement) {
+            // 모든 버튼에서 active 클래스 제거
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            // 클릭한 버튼에 active 클래스 추가 (검은색으로 변함)
+            btnElement.classList.add('active');
+            
+            // 해당 카테고리 상품 불러오기
+            loadProducts(id);
+        }
+        async function loadProducts(categoryId) {
+            try {
+                let url = '/api/products';
+                if (categoryId && categoryId !== 'all') {
+                    url += `?category_id=${categoryId}`;
+                }
+
+                const response = await fetch(url);
+                const products = await response.json();
+                
+                const productList = document.getElementById('product-list');
+                
+                if (products.length === 0) {
+                    productList.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">해당 카테고리에 상품이 없습니다.</p>';
+                    return;
+                }
+
+                productList.innerHTML = products.map(p => {
+                    // 평점 소수점 1자리까지 (예: 4.5)
+                    const rating = Number(p.avg_rating).toFixed(1);
+                    
+                    return `
+                    <div class="product-card">
+                        <a href="product.html?id=${p.product_id}" style="text-decoration: none; color: inherit;">
+                            <img src="${p.image_url}" alt="${p.name}" onerror="this.src='https://placehold.co/200'">
+                            <h3>${p.name}</h3>
+                        </a>
+                        <p style="color: #888; margin: 5px 0;">${p.category_name}</p>
+                        
+                        <div class="product-rating">
+                            <span class="star-icon">★</span>
+                            <span class="rating-score">${rating}</span>
+                            <span class="review-text">리뷰</span>
+                            <span class="review-count">${p.review_count}</span>
+                        </div>
+
+                        <p style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">
+                            ${p.price.toLocaleString()}원
+                        </p>
+                        
+                        <button class="btn btn-secondary" onclick="addToCart(${p.product_id})">장바구니</button>
+                        <button class="btn btn-primary" onclick="orderProduct(${p.product_id})">주문하기</button>
+                    </div>
+                `}).join('');
+            } catch (error) {
+                console.error("상품 로드 실패:", error);
+            }
+        }
+
+        // ✅ 장바구니 담기 함수 (이동 안 함)
+        async function addToCart(productId) {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                alert("로그인이 필요한 서비스입니다.");
+                location.href = 'login.html';
+                return;
+            }
+            const user = JSON.parse(userStr);
+
+            try {
+                const response = await fetch('/api/cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        member_id: user.member_id, 
+                        product_id: productId, 
+                        quantity: 1 // 목록에서는 기본 1개 담기
+                    })
+                });
+
+                if (response.ok) {
+                    // ✅ 여기서 이동하지 않고 알림만 띄웁니다!
+                    alert("장바구니에 담겼습니다.");
+                } else {
+                    alert("담기 실패");
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function orderProduct(productId) {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                alert("로그인이 필요한 서비스입니다.");
+                location.href = 'login.html';
+                return;
+            }
+            const user = JSON.parse(userStr);
+            if(!confirm("이 상품을 바로 주문하시겠습니까?")) return;
+
+            try {
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        member_id: user.member_id,
+                        recipient_name: user.name,
+                        recipient_phone: user.phone || "010-0000-0000",
+                        shipping_address: user.address || "기본 배송지",
+                        payment_method: "CARD",
+                        items: [{ product_id: productId, quantity: 1 }]
+                    })
+                });
+
+                const result = await response.json();
+                if(response.ok) {
+                    alert("주문 완료! 주문번호: " + result.order_id);
+                } else {
+                    alert("주문 실패: " + result.message);
+                }
+            } catch (error) {
+                console.error(error);
+                alert("주문 중 오류 발생");
+            }
+        }
+    </script>
+</body>
+</html>
