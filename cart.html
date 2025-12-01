@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>장바구니</title>
+    <title>장바구니 - Furniture Mall</title>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
         
@@ -78,7 +78,7 @@
                     <img src="${item.image_url}" onerror="this.src='https://placehold.co/100'">
                     <div class="info">
                         <h3>${item.name}</h3>
-                        <p>${item.price.toLocaleString()}원</p>
+                        <p>${parseInt(item.price).toLocaleString()}원</p>
                     </div>
                     <div class="actions">
                         수량: <input type="number" value="${item.quantity}" min="1" onchange="updateQty(${item.cart_id}, this.value)">
@@ -87,7 +87,7 @@
                 </div>`;
             }).join('');
             
-            document.getElementById('total-price').innerText = total.toLocaleString();
+            document.getElementById('total-price').innerText = parseInt(total).toLocaleString();
         }
 
         async function updateQty(cartId, qty) {

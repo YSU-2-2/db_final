@@ -160,6 +160,44 @@ app.get('/api/products', async (req, res) => {
         console.error('상품 조회 에러:', error);
         res.status(500).json({ message: '서버 오류가 발생했습니다.' });
     }
+}); 
+// ==========================================
+// 3.5 상품 상세 조회 API (이미지 갤러리 포함)
+// 주소: GET /api/products/:id
+// ==========================================
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const productId = req.params.id;
+
+        // 1. 상품 기본 정보 가져오기
+        const [productRows] = await pool.query(`
+            SELECT p.*, c.name as category_name 
+            FROM Product p 
+            JOIN Category c ON p.category_id = c.category_id
+            WHERE p.product_id = ?
+        `, [productId]);
+
+        if (productRows.length === 0) {
+            return res.status(404).json({ message: '상품이 없습니다.' });
+        }
+
+        const product = productRows[0];
+
+        // 2. 추가 이미지들 가져오기 (ProductImage 테이블)
+        const [imageRows] = await pool.query(`
+            SELECT image_url FROM ProductImage WHERE product_id = ?
+        `, [productId]);
+
+        // 3. 메인 이미지 + 추가 이미지를 합쳐서 images 배열 만들기
+        // (여기서 만든 product.images를 프론트엔드가 사용합니다)
+        product.images = [product.image_url, ...imageRows.map(img => img.image_url)];
+
+        res.json(product);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: '오류 발생' });
+    }
 });
 // ==========================================
 // 4. 주문하기 API (트랜잭션)

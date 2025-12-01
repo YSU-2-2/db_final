@@ -2,120 +2,286 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>상품 상세</title>
+    <title>상품 상세 - Furniture Mall</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
-        .product-info { display: flex; gap: 30px; margin-bottom: 40px; border-bottom: 1px solid #ddd; padding-bottom: 20px; }
-        .product-info img { width: 300px; height: 300px; object-fit: cover; }
-        .review-item { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
-        .star { color: gold; }
-        .btn-cart { padding: 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        /* 전체 레이아웃 */
+        body { font-family: 'Noto Sans KR', sans-serif; padding: 0; margin: 0; color: #333; background-color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        
+        /* 상단 네비게이션 */
+        .nav-back { display: inline-block; margin-bottom: 30px; text-decoration: none; color: #555; font-size: 15px; }
+        .nav-back:hover { color: #000; text-decoration: underline; }
+
+        /* 상품 레이아웃 (좌: 갤러리 / 우: 정보) */
+        .product-wrapper { display: flex; gap: 60px; flex-wrap: wrap; }
+        .gallery-section { flex: 1; min-width: 400px; }
+        .info-section { flex: 1; min-width: 350px; }
+
+        /* 🖼️ 메인 이미지 영역 */
+        .main-image-box {
+            width: 100%;
+            height: 500px;
+            background-color: #f9f9f9;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border-radius: 5px;
+        }
+        .main-image-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 꽉 채우기 */
+            transition: opacity 0.3s ease;
+        }
+
+        /* 🖼️ 썸네일 슬라이더 영역 */
+        .thumbnail-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+        }
+        
+        /* 슬라이드 버튼 (< >) */
+        .slide-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #aaa;
+            cursor: pointer;
+            padding: 0 10px;
+            transition: color 0.2s;
+            user-select: none;
+        }
+        .slide-btn:hover { color: #333; }
+
+        /* 썸네일 리스트 컨테이너 (스크롤 숨김) */
+        .thumbnail-list {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            scrollbar-width: none; /* 파이어폭스 스크롤 숨김 */
+            padding: 5px 0;
+        }
+        .thumbnail-list::-webkit-scrollbar { display: none; /* 크롬 스크롤 숨김 */ }
+
+        /* 개별 썸네일 이미지 */
+        .thumb-item {
+            width: 80px;
+            height: 80px;
+            flex-shrink: 0; /* 크기 줄어들지 않게 고정 */
+            object-fit: cover;
+            cursor: pointer;
+            opacity: 0.5;
+            border: 2px solid transparent;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .thumb-item:hover { opacity: 1; }
+        
+        /* 선택된 썸네일 스타일 */
+        .thumb-item.active {
+            opacity: 1;
+            border-color: #333;
+        }
+
+        /* 상품 텍스트 정보 */
+        .p-category { color: #888; font-size: 14px; margin-bottom: 10px; display: block; }
+        .p-name { font-size: 32px; font-weight: 700; margin: 0 0 20px; line-height: 1.3; }
+        .p-price { font-size: 28px; font-weight: 700; color: #111; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+        
+        .p-desc { 
+            font-size: 16px; line-height: 1.8; color: #555; margin-bottom: 40px; 
+            background: #f8f8f8; padding: 20px; border-radius: 8px;
+        }
+
+        /* 구매 옵션 */
+        .option-box { margin-bottom: 30px; }
+        .qty-label { font-weight: bold; margin-right: 10px; }
+        .qty-input { padding: 10px; width: 60px; text-align: center; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+
+        /* 버튼 그룹 */
+        .btn-group { display: flex; gap: 10px; height: 55px; }
+        .btn { flex: 1; border: none; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 4px; transition: 0.2s; }
+        .btn-cart { background: #fff; border: 1px solid #333; color: #333; }
+        .btn-cart:hover { background: #f5f5f5; }
+        .btn-buy { background: #333; color: #fff; }
+        .btn-buy:hover { background: #555; }
+
+        /* 리뷰 영역 */
+        .review-section { margin-top: 80px; border-top: 1px solid #eee; padding-top: 40px; }
+        .review-item { background: #f9f9f9; padding: 20px; margin-bottom: 15px; border-radius: 8px; }
+        .star-gold { color: gold; }
     </style>
 </head>
 <body>
-    <a href="index.html">← 목록으로</a>
-    <div id="product-detail">로딩중...</div>
+    <div class="container">
+        <a href="index.html" class="nav-back">← 목록으로 돌아가기</a>
 
-    <h3>📝 상품 리뷰</h3>
-    <div id="review-form" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd;">
-        <h4>리뷰 작성</h4>
-        <select id="rating">
-            <option value="5">⭐⭐⭐⭐⭐ (5점)</option>
-            <option value="4">⭐⭐⭐⭐ (4점)</option>
-            <option value="3">⭐⭐⭐ (3점)</option>
-            <option value="2">⭐⭐ (2점)</option>
-            <option value="1">⭐ (1점)</option>
-        </select>
-        <input type="text" id="comment" placeholder="리뷰 내용을 입력하세요" style="width: 60%;">
-        <button onclick="writeReview()">등록</button>
+        <div id="loading">데이터를 불러오는 중입니다...</div>
+
+        <div id="product-content" class="product-wrapper" style="display: none;">
+            
+            <div class="gallery-section">
+                <div class="main-image-box">
+                    <img id="mainImage" src="" alt="상품 대표 이미지">
+                </div>
+
+                <div class="thumbnail-wrapper">
+                    <button class="slide-btn" onclick="scrollThumbs(-1)">&#10094;</button>
+                    
+                    <div id="thumbnailList" class="thumbnail-list">
+                        </div>
+                    
+                    <button class="slide-btn" onclick="scrollThumbs(1)">&#10095;</button>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <span id="pCategory" class="p-category">CATEGORY</span>
+                <h1 id="pName" class="p-name">상품 이름</h1>
+                <div id="pPrice" class="p-price">0원</div>
+
+                <div id="pDesc" class="p-desc">
+                    상품 설명이 들어갑니다.
+                </div>
+
+                <div class="option-box">
+                    <label class="qty-label">수량</label>
+                    <input type="number" id="qty" class="qty-input" value="1" min="1">
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-cart" onclick="addToCart()">장바구니 담기</button>
+                    <button class="btn btn-buy" onclick="buyNow()">바로 구매하기</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="review-section">
+            <h3>📝 구매 고객 리뷰</h3>
+            <div id="review-list"></div>
+        </div>
     </div>
-    <div id="review-list"></div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const productId = urlParams.get('id');
         const user = JSON.parse(localStorage.getItem('user'));
 
+        // 1. 상품 상세 정보 로드
         async function loadProduct() {
-            const res = await fetch('/api/products');
-            const products = await res.json();
-            const product = products.find(p => p.product_id == productId);
-
-            document.getElementById('product-detail').innerHTML = `
-                <div class="product-info">
-                    <img src="${product.image_url}" onerror="this.src='https://placehold.co/300'">
-                    <div>
-                        <h1>${product.name}</h1>
-                        <p>${product.category_name}</p>
-                        <h2>${product.price.toLocaleString()}원</h2>
-                        <input type="number" id="qty" value="1" min="1" style="width: 50px; padding: 5px;">
-                        <button class="btn-cart" onclick="addToCart(${product.product_id})">장바구니 담기</button>
-                    </div>
-                </div>
-            `;
-            loadReviews();
-        }
-
-        // ✅ 수정된 장바구니 담기 함수
-        async function addToCart(id) {
-            if (!user) return alert("로그인이 필요합니다.");
-            const qty = document.getElementById('qty').value;
-            
             try {
-                const response = await fetch('/api/cart', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        member_id: user.member_id, 
-                        product_id: id, 
-                        quantity: qty 
-                    })
-                });
+                const res = await fetch(`/api/products/${productId}`);
+                if (!res.ok) throw new Error('상품을 찾을 수 없습니다.');
+                
+                const product = await res.json();
 
-                if(response.ok) {
-                    // ✅ 이동 질문 없이 성공 메시지만 표시하고 끝!
-                    alert("장바구니에 담겼습니다.");
-                } else {
-                    alert("담기 실패");
-                }
+                // 텍스트 정보 채우기
+                document.getElementById('pCategory').innerText = product.category_name;
+                document.getElementById('pName').innerText = product.name;
+                document.getElementById('pPrice').innerText = parseInt(product.price).toLocaleString() + '원';
+                document.getElementById('pDesc').innerText = product.description;
+
+                // 🖼️ 이미지 갤러리 설정 (중복 제거)
+                // Set을 사용해서 똑같은 이미지 주소가 있으면 하나만 남김
+                const uniqueImages = [...new Set(product.images)];
+                setupGallery(uniqueImages);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('product-content').style.display = 'flex';
+
+                loadReviews();
+
             } catch (error) {
-                console.error(error);
+                document.getElementById('loading').innerText = "오류: " + error.message;
             }
         }
 
+        // 2. 갤러리 세팅 함수
+        function setupGallery(images) {
+            const mainImg = document.getElementById('mainImage');
+            const thumbList = document.getElementById('thumbnailList');
+
+            // 첫 번째 이미지 메인으로 설정
+            if (images.length > 0) {
+                mainImg.src = images[0];
+            }
+
+            // 썸네일 생성
+            thumbList.innerHTML = images.map((img, index) => `
+                <img src="${img}" 
+                     class="thumb-item ${index === 0 ? 'active' : ''}" 
+                     onclick="changeImage('${img}', this)"
+                     onerror="this.src='https://placehold.co/80'">
+            `).join('');
+        }
+
+        // 3. 썸네일 클릭 시 메인 이미지 변경
+        function changeImage(src, element) {
+            document.getElementById('mainImage').src = src;
+            
+            // 선택된 테두리 이동
+            document.querySelectorAll('.thumb-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // 4. 썸네일 좌우 스크롤 버튼 기능
+        function scrollThumbs(direction) {
+            const container = document.getElementById('thumbnailList');
+            const scrollAmount = 100; // 한 번에 이동할 거리
+            container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+        }
+
+        // 5. 장바구니 담기
+        async function addToCart() {
+            if (!user) {
+                if(confirm("로그인이 필요합니다. 로그인 하시겠습니까?")) location.href='login.html';
+                return;
+            }
+            const qty = document.getElementById('qty').value;
+            
+            try {
+                const res = await fetch('/api/cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ member_id: user.member_id, product_id: productId, quantity: qty })
+                });
+                if(res.ok) alert("장바구니에 담겼습니다.");
+                else alert("실패");
+            } catch(e) { console.error(e); }
+        }
+
+        // 6. 바로 구매하기 (임시 기능)
+        function buyNow() {
+            alert("준비 중인 기능입니다. 장바구니를 이용해주세요!");
+        }
+
+        // 7. 리뷰 로드
         async function loadReviews() {
             const res = await fetch(`/api/products/${productId}/reviews`);
             const reviews = await res.json();
+            const list = document.getElementById('review-list');
             
-            document.getElementById('review-list').innerHTML = reviews.map(r => `
-                <div class="review-item">
-                    <strong>${r.reviewer_name}</strong> 
-                    <span class="star">${'★'.repeat(r.rating)}</span>
-                    <p>${r.comment}</p>
-                    <small>${new Date(r.created_at).toLocaleDateString()}</small>
-                </div>
-            `).join('') || '<p>작성된 리뷰가 없습니다.</p>';
-        }
-
-        async function writeReview() {
-            if (!user) return alert("로그인이 필요합니다.");
-            const rating = document.getElementById('rating').value;
-            const comment = document.getElementById('comment').value;
-
-            const res = await fetch('/api/reviews', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    member_id: user.member_id,
-                    product_id: productId,
-                    rating,
-                    comment
-                })
-            });
-
-            const result = await res.json();
-            alert(result.message);
-            if (res.ok) loadReviews();
+            if(reviews.length === 0) list.innerHTML = "<p style='color:#888;'>작성된 리뷰가 없습니다.</p>";
+            else {
+                list.innerHTML = reviews.map(r => `
+                    <div class="review-item">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <strong>${r.reviewer_name}</strong> 
+                            <span style="color:#888; font-size:13px;">${new Date(r.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div style="margin-bottom:5px;">
+                            <span class="star-gold">${'★'.repeat(r.rating)}</span>
+                            <span style="color:#ddd;">${'★'.repeat(5 - r.rating)}</span>
+                        </div>
+                        <p style="color:#555; margin:0;">${r.comment}</p>
+                    </div>
+                `).join('');
+            }
         }
 
         loadProduct();

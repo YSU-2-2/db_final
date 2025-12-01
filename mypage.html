@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>마이페이지 - 주문 내역</title>
+    <title>마이페이지 - Furniture Mall</title>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background-color: #f9f9f9; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -58,8 +58,7 @@
 
     <script>
         const user = JSON.parse(localStorage.getItem('user'));
-        // 리뷰 작성을 위해 선택된 상품 정보를 임시 저장할 변수
-        let selectedProduct = null;
+        let selectedProduct = null; // 리뷰 작성을 위해 선택된 상품 정보
 
         // 1. 주문 내역 불러오기
         async function loadOrders() {
@@ -89,7 +88,7 @@
                         <img src="${item.image_url}" onerror="this.src='https://placehold.co/100'">
                         <div class="item-info">
                             <h3>${item.product_name}</h3>
-                            <p>${item.price_at_purchase.toLocaleString()}원 / ${item.quantity}개</p>
+                            <p>${parseInt(item.price_at_purchase).toLocaleString()}원 / ${item.quantity}개</p>
                         </div>
                         <div>
                             ${item.review_id 
